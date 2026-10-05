@@ -1,6 +1,7 @@
 import random
 import streamlit as st
 
+# FIXME: Logic breaks here
 def get_range_for_difficulty(difficulty: str):
     if difficulty == "Easy":
         return 1, 20
@@ -29,6 +30,7 @@ def parse_guess(raw: str):
     return True, value, None
 
 
+# FIXME: Logic breaks here
 def check_guess(guess, secret):
     if guess == secret:
         return "Win", "🎉 Correct!"
@@ -47,6 +49,7 @@ def check_guess(guess, secret):
         return "Too Low", "📉 Go LOWER!"
 
 
+# FIXME: Logic breaks here
 def update_score(current_score: int, outcome: str, attempt_number: int):
     if outcome == "Win":
         points = 100 - 10 * (attempt_number + 1)
@@ -77,6 +80,7 @@ difficulty = st.sidebar.selectbox(
     index=1,
 )
 
+# FIXME: Logic breaks here
 attempt_limit_map = {
     "Easy": 6,
     "Normal": 8,
@@ -89,9 +93,11 @@ low, high = get_range_for_difficulty(difficulty)
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
+# FIXME: Logic breaks here
 if "secret" not in st.session_state:
     st.session_state.secret = random.randint(low, high)
 
+# FIXME: Logic breaks here
 if "attempts" not in st.session_state:
     st.session_state.attempts = 1
 
@@ -133,6 +139,7 @@ with col3:
 
 if new_game:
     st.session_state.attempts = 0
+    # FIXME: Logic breaks here
     st.session_state.secret = random.randint(1, 100)
     st.success("New game started.")
     st.rerun()
@@ -155,6 +162,7 @@ if submit:
     else:
         st.session_state.history.append(guess_int)
 
+        # FIXME: Logic breaks here
         if st.session_state.attempts % 2 == 0:
             secret = str(st.session_state.secret)
         else:
