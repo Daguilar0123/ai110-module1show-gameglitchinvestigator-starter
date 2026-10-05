@@ -93,9 +93,20 @@ low, high = get_range_for_difficulty(difficulty)
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
-# FIXME: Logic breaks here
-if "secret" not in st.session_state:
+# Streamlit reruns this script on every widget change, so a once-per-session
+# guard goes stale when the difficulty changes. Regenerate on first load AND
+# whenever the selected difficulty differs from the one the secret was drawn for.
+# A mid-session difficulty switch also resets the rest of the game state so we
+# never end up half-reset (new secret, old attempts/score/status/history).
+difficulty_changed = st.session_state.get("secret_difficulty") not in (None, difficulty)
+if "secret" not in st.session_state or difficulty_changed:
     st.session_state.secret = random.randint(low, high)
+    st.session_state.secret_difficulty = difficulty
+if difficulty_changed:
+    st.session_state.attempts = 0  # same starting value New Game uses
+    st.session_state.score = 0
+    st.session_state.status = "playing"
+    st.session_state.history = []
 
 # FIXME: Logic breaks here
 if "attempts" not in st.session_state:
@@ -139,8 +150,7 @@ with col3:
 
 if new_game:
     st.session_state.attempts = 0
-    # FIXME: Logic breaks here
-    st.session_state.secret = random.randint(1, 100)
+    st.session_state.secret = random.randint(low, high)
     st.success("New game started.")
     st.rerun()
 
