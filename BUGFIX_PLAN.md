@@ -8,18 +8,17 @@ other leaves the bug half-fixed). Each bug gets ONE worktree/session, not one pe
 FIXME comment. **→ Open 4 terminals.** Testing is a separate 5th session, run only
 after all 4 merge — not counted in the 4.
 
-## Prerequisite — commit before creating any worktree
+## Prerequisite — commit before creating any worktree (DONE)
 
-`git worktree add` branches off a commit, not your working tree. The FIXME
-markers, this plan file, and the notes/reflection edits are currently **uncommitted**
-in the main checkout — a worktree created right now would get the original,
-unmarked code and wouldn't have this plan file at all. Commit `app.py`,
-`BUGFIX_PLAN.md`, `ai_interactions.md`, and `reflection.md` to `main` before step 2
-below.
+`git worktree add` branches off a commit, not your working tree, so the FIXME
+markers and this plan file needed to be committed before any worktree would see
+them. Resolved: `app.py` and `BUGFIX_PLAN.md` are committed to `main`.
+`ai_interactions.md` and `reflection.md` did not need to be committed for this —
+none of the four bug prompts read or reference them.
 
 ## How this runs
 
-1. Commit the current changes to `main`.
+1. ~~Commit the current changes to `main`.~~ Done.
 2. Open 4 terminals, each starting a fresh Claude Code session **in this repo's
    root** (not inside a worktree yet — creating the worktree is each session's own
    first step, per its prompt below).
@@ -52,7 +51,7 @@ below.
 ```
 Bug A: .venv/bin/python -m pytest tests/test_game_logic.py::test_hard_range_at_least_as_wide_as_normal -v
 Bug B: .venv/bin/python -m pytest tests/test_game_logic.py::test_check_guess_numeric_not_lexicographic -v
-Bug C: .venv/bin/python -m pytest tests/test_game_logic.py::test_win_score_first_guess test_too_high_score_flat_penalty -v
+Bug C: .venv/bin/python -m pytest tests/test_game_logic.py::test_win_score_first_guess tests/test_game_logic.py::test_too_high_score_flat_penalty -v
 Bug D: .venv/bin/python -m pytest tests/test_game_logic.py::test_generated_secret_within_easy_range -v   (only if extracted to logic_utils.py — see Bug D below)
 ```
 
@@ -67,6 +66,16 @@ Bug D: .venv/bin/python -m streamlit run app.py --server.port 8514
 ---
 
 ## Bug A — Difficulty settings duplicated & inconsistent
+
+**Status:** session ran real win-rate modeling and found the original diagnosis
+incomplete (range alone isn't the fairness picture once attempts are factored in —
+by that fuller measure Hard was already the hardest mode today). Approved
+decisions, superseding the literal prompt below: Hard's range widens to tie
+Normal's, with attempts bumped 5→6 (not the prompt's literal "range >= Normal's,
+keep 5 attempts," which would have made Hard a near-lottery). Also approved: add a
+symmetric `get_attempt_limit(difficulty)` helper, and fold in a fix for an
+independently-found third bug — the guess-prompt text ("Guess a number between 1
+and 100...") is hardcoded regardless of actual difficulty range.
 
 **Prompt for a fresh session:**
 ```
@@ -145,6 +154,22 @@ look right.
 
 ## Bug B — Hint direction / `check_guess`
 
+**Status:** session caught that the test prescribed below
+(`test_check_guess_numeric_not_lexicographic`) doesn't actually test the bug —
+passing two plain ints never reaches the `except TypeError` path at all, so it
+would pass identically whether the bug existed or not. Approved replacement,
+superseding Step 3 below:
+```python
+def test_check_guess_rejects_mixed_types():
+    import pytest
+    from logic_utils import check_guess
+    with pytest.raises(TypeError):
+        check_guess(9, "80")  # old code silently answered "Too High" here
+```
+Keep the original `check_guess(9, 80) == "Too Low"` too, as a second basic-case
+check — harmless, just not the one doing the real work. Command:
+`.venv/bin/python -m pytest tests/test_game_logic.py -v`.
+
 **Prompt for a fresh session:**
 ```
 You're working in the ai110-module1show-gameglitchinvestigator-starter repo — a
@@ -212,6 +237,13 @@ Commit only after Danny confirms the diff and the test/live check look right.
 
 ## Bug C — Scoring logic (`update_score` + attempts seed)
 
+**Status:** matched the prescribed fix exactly, verified with real before/after
+numbers (a true first-guess win paid 70 before the fix — seed bug and formula bug
+compounding — 90 after). Implemented "Too High"/"Too Low" as one merged
+`if outcome in ("Too High", "Too Low")` condition rather than two separate blocks
+— functionally identical to what's prescribed below, just more compact. No
+decisions pending; approved as-is.
+
 **Prompt for a fresh session:**
 ```
 You're working in the ai110-module1show-gameglitchinvestigator-starter repo — a
@@ -278,6 +310,22 @@ Commit only after Danny confirms the diff and the test/live check look right.
 ---
 
 ## Bug D — Secret can be out of range
+
+**Status:** resolved empirically, not just reasoned about — used Streamlit's
+`AppTest` harness to run real trials: 28/40 and 31/40 out-of-range before the fix
+across the two candidate mechanisms respectively, confirming **both** were real
+contributors (not just one). Fixed both with a single unified guard (tracks which
+difficulty the current secret was drawn under, regenerates when it changes);
+0/320 out-of-range after, across every difficulty with repeated switching.
+Decided not to extract a pure `generate_secret()` into `logic_utils.py` (Bug A's
+stub wasn't fixed yet in this worktree, so extracting would mean a third copy of
+range data or depending on broken code, plus colliding with sibling worktrees
+editing the same stub file) — approved. No pytest test written, as anticipated;
+deferred to the testing session's `AppTest` approach. Also raised: should
+switching difficulty mid-game reset the whole game state (attempts/score/status),
+not just the secret? Recommended yes, to avoid landing in an incoherent state
+(e.g. attempts already past the new difficulty's lower limit the instant you
+switch).
 
 **Prompt for a fresh session:**
 ```

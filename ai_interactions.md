@@ -1,6 +1,16 @@
 # AI Interactions Log
 
-> **Stretch features only.** Only fill in the sections that apply to stretch features you attempted. If you did not attempt a stretch feature, leave its section blank or delete it. This file is not required for the core project.
+> **Note on how this file is actually being used (2026-10-05):** the template
+> originally put a "stretch features only" disclaimer at the very top, implying it
+> scoped the whole file. In practice, the **Notes** section below has been used as a
+> running interaction/debugging log for the entire investigation — not a stretch
+> feature — per Danny's own explicit instruction on 2026-10-04 ("if there is not a
+> notes section, just use the interaction log to tag a note"). So this file is being
+> used for more than what its instructions describe. To fix the organization: Notes
+> (the actively-used section) now comes first, and the original "stretch features
+> only" disclaimer has been moved down to sit directly above the four template
+> sections it actually describes, instead of sitting at the top looking like it
+> covers everything below it.
 
 ---
 
@@ -149,7 +159,40 @@ secret-generation into its own testable function, or Streamlit's `AppTest` harne
 **Status after this entry:** `app.py` and `logic_utils.py` reverted to their original
 (broken, stub) state. This log and `reflection.md` are untouched by the revert.
 
+### Session summary — 2026-10-05 — Four-worktree bugfix dispatch
+
+Four fresh Claude sessions were started (all in the repo root on `main` initially),
+each assigned one bug from `BUGFIX_PLAN.md` via a self-contained prompt instructing it
+to create its own worktree, sanity-check the prescribed diagnosis against the real
+code rather than follow it blindly, and stop for review at each major step. All four
+did real independent verification rather than executing blindly:
+
+- **Bug A (difficulty settings):** ran actual win-rate modeling under perfect play and
+  found the original diagnosis incomplete — range alone isn't the fairness picture
+  once attempts are factored in. Proposed Hard → range tied to Normal's, attempts 5→6,
+  to preserve the existing difficulty curve. Independently found the same hardcoded
+  "between 1 and 100" prompt-text bug Bug D's session also found.
+- **Bug B (hint direction):** confirmed the diagnosis, but caught that the originally
+  prescribed regression test (`check_guess(9, 80) == "Too Low"`) never actually
+  exercised the buggy code path — it would pass identically whether the bug existed or
+  not. Replaced it with a test asserting the old silent-fallback behavior is gone.
+- **Bug C (scoring logic):** test-driven — wrote tests first, watched them fail against
+  the stub, then fixed it, directly measuring the bug's compounding effect (a true
+  first-guess win paid 70 instead of 90 before the fix).
+- **Bug D (secret out of range):** used Streamlit's own `AppTest` harness to empirically
+  confirm both candidate mechanisms were real contributors (28/40 and 31/40 trials
+  out of range before the fix, 0/320 after), rather than guessing which one applied.
+  Raised a genuine open question: should switching difficulty mid-game reset the whole
+  game state, not just the secret? (Recommended: yes.)
+
+All four are currently paused at a review checkpoint awaiting live confirmation before
+committing.
+
 ---
+
+> **Stretch features only.** Only fill in the sections below that apply to stretch
+> features you attempted. If you did not attempt a stretch feature, leave its section
+> blank or delete it. This file is not required for the core project.
 
 ## Agent Workflow (SF8)
 
