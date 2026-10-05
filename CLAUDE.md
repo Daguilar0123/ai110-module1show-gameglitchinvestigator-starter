@@ -39,6 +39,17 @@ prints `3.13.x`.
   dependency, unit-testable directly with pytest.
 - `tests/test_game_logic.py` — imports from `logic_utils.py` only.
 
+## Required deliverables
+- `README.md` — project overview, demo walkthrough, and (if applicable) test output.
+- `reflection.md` — bug reproduction logs and the AI-collaboration reflection.
+- `tests/test_game_logic.py` — the automated tests.
+- `ai_interactions.md` — **only required if a stretch challenge was attempted**
+  (documents AI prompts, agent workflow, linting evidence, or a model
+  comparison). Note: this repo is currently also using it as a general
+  debugging/interaction log beyond that stated scope — see the note at the top
+  of that file.
+- `test_results.txt` (optional) — generated via `pytest > test_results.txt`.
+
 ## Workflow: parallel bugfixing with worktrees
 When there are multiple independent-ish defects to fix at once, prefer one
 Claude Code session per defect over fixing sequentially in one session or
