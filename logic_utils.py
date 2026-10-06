@@ -1,6 +1,26 @@
+# Single source of truth for per-difficulty behavior. Hard ties Normal's range
+# and allows fewer attempts, so it is at least as hard on both axes.
+DIFFICULTY_SETTINGS = {
+    "Easy": {"range": (1, 20), "attempts": 6},
+    "Normal": {"range": (1, 100), "attempts": 8},
+    "Hard": {"range": (1, 100), "attempts": 5},
+}
+DEFAULT_DIFFICULTY = "Normal"
+
+
+def _settings_for(difficulty: str):
+    """Look up a difficulty's settings, falling back to Normal if unknown."""
+    return DIFFICULTY_SETTINGS.get(difficulty, DIFFICULTY_SETTINGS[DEFAULT_DIFFICULTY])
+
+
 def get_range_for_difficulty(difficulty: str):
     """Return (low, high) inclusive range for a given difficulty."""
-    raise NotImplementedError("Refactor this function from app.py into logic_utils.py")
+    return _settings_for(difficulty)["range"]
+
+
+def get_attempt_limit(difficulty: str):
+    """Return the number of attempts allowed for a given difficulty."""
+    return _settings_for(difficulty)["attempts"]
 
 
 def parse_guess(raw: str):

@@ -4,15 +4,7 @@ from logic_utils import check_guess
 
 from logic_utils import update_score
 
-# FIXME: Logic breaks here
-def get_range_for_difficulty(difficulty: str):
-    if difficulty == "Easy":
-        return 1, 20
-    if difficulty == "Normal":
-        return 1, 100
-    if difficulty == "Hard":
-        return 1, 50
-    return 1, 100
+from logic_utils import get_attempt_limit, get_range_for_difficulty
 
 
 def parse_guess(raw: str):
@@ -54,13 +46,9 @@ difficulty = st.sidebar.selectbox(
     index=1,
 )
 
-# FIXME: Logic breaks here
-attempt_limit_map = {
-    "Easy": 6,
-    "Normal": 8,
-    "Hard": 5,
-}
-attempt_limit = attempt_limit_map[difficulty]
+# Attempt limit and range come from DIFFICULTY_SETTINGS in logic_utils.py (the
+# single source of truth) instead of being hardcoded here.
+attempt_limit = get_attempt_limit(difficulty)
 
 low, high = get_range_for_difficulty(difficulty)
 
@@ -96,8 +84,10 @@ if "history" not in st.session_state:
 
 st.subheader("Make a guess")
 
+# Uses the low/high variables for the selected difficulty rather than a
+# hardcoded "1 and 100", so this text always matches the sidebar range.
 st.info(
-    f"Guess a number between 1 and 100. "
+    f"Guess a number between {low} and {high}. "
     f"Attempts left: {attempt_limit - st.session_state.attempts}"
 )
 

@@ -34,3 +34,16 @@ def test_too_high_score_flat_penalty():
     from logic_utils import update_score
     assert update_score(0, "Too High", 2) == -5
     assert update_score(0, "Too High", 3) == -5
+
+def test_hard_range_at_least_as_wide_as_normal():
+    from logic_utils import get_range_for_difficulty
+    normal_low, normal_high = get_range_for_difficulty("Normal")
+    hard_low, hard_high = get_range_for_difficulty("Hard")
+    assert (hard_high - hard_low) >= (normal_high - normal_low)
+
+def test_attempt_limit_per_difficulty():
+    # Hard keeps fewer attempts than Normal; the range test above covers the other axis
+    from logic_utils import get_attempt_limit
+    assert get_attempt_limit("Easy") == 6
+    assert get_attempt_limit("Normal") == 8
+    assert get_attempt_limit("Hard") == 5
