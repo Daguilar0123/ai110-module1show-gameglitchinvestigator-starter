@@ -47,12 +47,16 @@ none of the four bug prompts read or reference them.
 | C — Scoring logic | `update_score`, the `attempts = 1` seed line | `bugfix/scoring-logic` | `../ggi-scoring-logic` | 8513 |
 | D — Secret out of range | the initial `secret` guard, New Game's `random.randint(1, 100)` | `bugfix/secret-range` | `../ggi-secret-range` | 8514 |
 
-**Pytest commands you'll be given by each session (reference now, for your own terminal):**
+**Pytest commands you'll be given by each session (reference now, for your own
+terminal).** The assignment's own instructions say to "confirm that your new
+test passes along with the existing starter tests" — that means running the
+whole file, not filtering to just the new test name, so all four use the same
+unfiltered command:
 ```
-Bug A: .venv/bin/python -m pytest tests/test_game_logic.py::test_hard_range_at_least_as_wide_as_normal -v
-Bug B: .venv/bin/python -m pytest tests/test_game_logic.py::test_check_guess_numeric_not_lexicographic -v
-Bug C: .venv/bin/python -m pytest tests/test_game_logic.py::test_win_score_first_guess tests/test_game_logic.py::test_too_high_score_flat_penalty -v
-Bug D: .venv/bin/python -m pytest tests/test_game_logic.py::test_generated_secret_within_easy_range -v   (only if extracted to logic_utils.py — see Bug D below)
+Bug A: .venv/bin/python -m pytest tests/test_game_logic.py -v
+Bug B: .venv/bin/python -m pytest tests/test_game_logic.py -v
+Bug C: .venv/bin/python -m pytest tests/test_game_logic.py -v
+Bug D: .venv/bin/python -m pytest tests/test_game_logic.py -v   (only meaningful if a test was actually added — see Bug D below)
 ```
 
 **Streamlit commands (run from inside each bug's own worktree):**
@@ -67,13 +71,28 @@ Bug D: .venv/bin/python -m streamlit run app.py --server.port 8514
 
 ## Bug A — Difficulty settings duplicated & inconsistent
 
-**Status:** session ran real win-rate modeling and found the original diagnosis
-incomplete (range alone isn't the fairness picture once attempts are factored in —
-by that fuller measure Hard was already the hardest mode today). Approved
-decisions, superseding the literal prompt below: Hard's range widens to tie
-Normal's, with attempts bumped 5→6 (not the prompt's literal "range >= Normal's,
-keep 5 attempts," which would have made Hard a near-lottery). Also approved: add a
-symmetric `get_attempt_limit(difficulty)` helper, and fold in a fix for an
+**Status: COMMITTED as `c97c18e` on `bugfix/difficulty-settings` (2026-10-06).**
+pytest (5 collected: 3 pre-existing failures are `check_guess`, unrelated to
+this bug and expected until Bug B merges; both of this bug's own tests pass)
+and the live check on port 8511 (sidebar range/attempts and the guess-prompt
+text agree across Easy/Normal/Hard) both confirmed directly by Danny before
+committing. Ready for the batched merge once B and C are also committed.
+
+Session ran real win-rate modeling (verified independently: max
+solvable secrets under perfect binary-search play with *k* guesses is exactly
+2^k − 1 — for Hard's 5 attempts, 31, matching both the "Hard at 1–100" 31% figure
+and "today's Hard at 1–50" 62% figure exactly) and found the original diagnosis
+incomplete — range alone isn't the fairness picture once attempts are factored
+in. Initial recommendation was Option B (range tied to Normal's, attempts 5→6),
+but the session later reversed itself with a stronger argument: B's rationale was
+"preserve today's ~62% difficulty," but that number is a ceiling measured on a
+*broken* game (backwards hints, wrong attempt-seed, out-of-range secrets) — not a
+baseline worth preserving. **Final decision: Hard = range (1, 100), attempts
+stays at 5** (Option A) — matches what the original brief already called
+correct, keeps this branch scoped to only the range bug actually diagnosed, and
+defers attempt-count tuning to after B/C/D merge and the game is actually
+playable (the new dict makes that a one-line change later). Also approved: a
+symmetric `get_attempt_limit(difficulty)` helper, and folding in a fix for an
 independently-found third bug — the guess-prompt text ("Guess a number between 1
 and 100...") is hardcoded regardless of actual difficulty range.
 
@@ -138,7 +157,7 @@ def test_hard_range_at_least_as_wide_as_normal():
     assert (hard_high - hard_low) >= (normal_high - normal_low)
 
 Step 4 — give Danny these exact commands to run himself:
-- Test: .venv/bin/python -m pytest tests/test_game_logic.py::test_hard_range_at_least_as_wide_as_normal -v
+- Test (unfiltered, per the assignment's own instructions — confirms the new test passes alongside the existing suite, not in isolation): .venv/bin/python -m pytest tests/test_game_logic.py -v
 - Live check: .venv/bin/python -m streamlit run app.py --server.port 8511
 
 Constraints:
@@ -154,20 +173,37 @@ look right.
 
 ## Bug B — Hint direction / `check_guess`
 
-**Status:** session caught that the test prescribed below
+**Status: COMMITTED as `22017a0` on `bugfix/hint-direction` (2026-10-06).** pytest
+(5/5 passed — `check_guess` is actually implemented in this worktree, unlike A/C/D)
+and the live check on port 8512 (hints point the correct direction on both odd
+and even attempts) both confirmed directly by Danny before committing. Session
+proactively flagged the two expected merge-conflict zones (the `app.py` import
+block, the tail of `tests/test_game_logic.py`) — matches what's already
+predicted in `HANDOFF.ahd.yaml`'s merge plan.
+
+Earlier: session caught that the test prescribed below
 (`test_check_guess_numeric_not_lexicographic`) doesn't actually test the bug —
 passing two plain ints never reaches the `except TypeError` path at all, so it
-would pass identically whether the bug existed or not. Approved replacement,
-superseding Step 3 below:
+would pass identically whether the bug existed or not. Approved replacement —
+landed under renamed, clearer test names (confirmed 2026-10-06 by reading the
+worktree's actual files directly, not just the self-report):
 ```python
-def test_check_guess_rejects_mixed_types():
+def test_guess_too_low_one_digit_vs_two_digit():
+    # 9 < 80 numerically (but "9" > "80" alphabetically) — kept as a basic-case check
+    assert check_guess(9, 80) == "Too Low"
+
+def test_check_guess_does_not_fall_back_to_string_compare():
+    # The old code caught the TypeError from int-vs-str and compared alphabetically,
+    # silently answering "Too High" for check_guess(9, "80"). A str secret must fail loudly.
     import pytest
-    from logic_utils import check_guess
     with pytest.raises(TypeError):
-        check_guess(9, "80")  # old code silently answered "Too High" here
+        check_guess(9, "80")
 ```
-Keep the original `check_guess(9, 80) == "Too Low"` too, as a second basic-case
-check — harmless, just not the one doing the real work. Command:
+`app.py` diff also confirmed directly: import added, inline `check_guess` and the
+even-attempt string coercion both removed, `OUTCOME_MESSAGES` lookup added with
+the hint directions corrected ("Too High" → "Go LOWER!", "Too Low" → "Go
+HIGHER!"). Since `check_guess` is actually implemented in this worktree (unlike
+A/C/D), all 5 tests pass here, not just the 2 new ones. Command:
 `.venv/bin/python -m pytest tests/test_game_logic.py -v`.
 
 **Prompt for a fresh session:**
@@ -237,12 +273,28 @@ Commit only after Danny confirms the diff and the test/live check look right.
 
 ## Bug C — Scoring logic (`update_score` + attempts seed)
 
-**Status:** matched the prescribed fix exactly, verified with real before/after
-numbers (a true first-guess win paid 70 before the fix — seed bug and formula bug
-compounding — 90 after). Implemented "Too High"/"Too Low" as one merged
+**Status: FULLY COMMITTED AND CLOSED OUT — two commits on `bugfix/scoring-logic`.**
+`ed6a604` (2026-10-05): the original scoring fix — landed ahead of Danny's own
+check (accepted per DR9, same precedent as Bug D/DR7), confirmed clean
+afterward via Danny's own unfiltered pytest run and the port-8513 live check.
+`7cc8b1f` (2026-10-06): fixes Issue 6 (New Game wasn't resetting
+score/status/history — a genuine, severe, pre-existing bug found during the
+live check, not caused by this branch). The session pushed back hard on the
+coordinator's first proposed fix, empirically (scratch-clone merge tests, not
+just argument), caught a factual error in the proposal, and the final plan
+(DR11) reflects its own recommendation. Danny live-checked both the win and
+loss paths before this commit. Also surfaced (separately, not fixed):
+non-numeric input silently consumes an attempt, and the game-over check only
+runs on valid guesses — tracked as **Issue 5**, confirmed as a real bug,
+explicitly **not fixed** (Danny's call, due to time) — report only, no
+worktree, no bundling with the parse_guess migration.
+
+Independent verification inside the session was thorough: matched the
+prescribed fix exactly, verified with real before/after numbers (a true
+first-guess win paid 70 before the fix — seed bug and formula bug compounding
+— 90 after). Implemented "Too High"/"Too Low" as one merged
 `if outcome in ("Too High", "Too Low")` condition rather than two separate blocks
-— functionally identical to what's prescribed below, just more compact. No
-decisions pending; approved as-is.
+— functionally identical to what's prescribed below, just more compact.
 
 **Prompt for a fresh session:**
 ```
@@ -296,7 +348,7 @@ def test_too_high_score_flat_penalty():
     assert update_score(0, "Too High", 3) == -5
 
 Step 4 — give Danny these exact commands:
-- Tests: .venv/bin/python -m pytest tests/test_game_logic.py::test_win_score_first_guess tests/test_game_logic.py::test_too_high_score_flat_penalty -v
+- Tests (unfiltered, per the assignment's own instructions): .venv/bin/python -m pytest tests/test_game_logic.py -v
 - Live check: .venv/bin/python -m streamlit run app.py --server.port 8513
 
 Constraints:
@@ -326,6 +378,22 @@ switching difficulty mid-game reset the whole game state (attempts/score/status)
 not just the secret? Recommended yes, to avoid landing in an incoherent state
 (e.g. attempts already past the new difficulty's lower limit the instant you
 switch).
+
+Commit `c78016d` landed before the live check gate — Danny confirms (2026-10-05)
+this was an accidental approval on his end, not a session process violation; the
+session itself noted the ordering was off. Not reverting, since the diff was
+already thoroughly empirically verified (28/40, 31/40 → 0/320 trial counts
+above).
+
+**Live check on port 8514: CONFIRMED (2026-10-06).** All 5 real scenarios
+passed — difficulty switch regenerates the secret in-range for Easy/Normal/
+Hard, New Game stays in-range across repeats, a mid-game switch to Hard resets
+attempts/score/secret/history, and a same-difficulty rerun is a correct no-op.
+Issue 6 (New Game not resetting status) is present here too, as expected —
+this worktree never received Bug C's fix — but it's not a gate: it resolves
+automatically once this branch and Bug C's merge together (already verified
+clean via Bug C's own scratch-clone merge test). **This branch is ready for
+the batched merge.**
 
 **Prompt for a fresh session:**
 ```
