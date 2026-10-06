@@ -188,6 +188,39 @@ did real independent verification rather than executing blindly:
 All four are currently paused at a review checkpoint awaiting live confirmation before
 committing.
 
+**#note — 2026-10-06 — How `source .venv/bin/activate` works, mechanically**
+
+> `source` (as opposed to just running the file) executes the script inside the current
+> shell process instead of a throwaway subshell, so its effects stick around after the
+> line finishes. The script itself does three things to the current terminal session:
+> prepends that venv's `bin/` folder to `PATH` (so bare `python`/`pip`/`pytest`/etc.,
+> with no path, resolve to this venv's copies first), sets a `VIRTUAL_ENV` environment
+> variable, and rewrites the shell prompt to show `(venv-name)` in front.
+
+Danny's own follow-up, worth preserving: this only affects the one terminal session it
+was run in — a freshly opened terminal starts unactivated again (no auto-run on shell
+startup), and since each of the 4 bugfix worktrees has its own separate `.venv`,
+activating in one terminal has zero effect on any other terminal or worktree.
+
+**#note — 2026-10-06 — Bug B pytest output: all 5 tests pass**
+
+```
+tests/test_game_logic.py::test_winning_guess PASSED                         [ 20%]
+tests/test_game_logic.py::test_guess_too_high PASSED                        [ 40%]
+tests/test_game_logic.py::test_guess_too_low PASSED                         [ 60%]
+tests/test_game_logic.py::test_guess_too_low_one_digit_vs_two_digit PASSED  [ 80%]
+tests/test_game_logic.py::test_check_guess_does_not_fall_back_to_string_compare PASSED [100%]
+
+5 passed in 0.18s
+```
+
+Unlike Bug A's and Bug D's worktrees (where `check_guess` is still a stub, so the
+original 3 tests fail there), Bug B's worktree has `check_guess` actually
+implemented — so all 5 tests pass together here, not just its own 2 new ones.
+Danny's own observation, worth keeping: these tests exercise the real
+game-guessing logic itself (`check_guess`'s win/too-high/too-low decision), not
+some abstract pytest-library behavior independent of the game.
+
 ---
 
 > **Stretch features only.** Only fill in the sections below that apply to stretch
