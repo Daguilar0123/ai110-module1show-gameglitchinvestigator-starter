@@ -2,6 +2,8 @@ import random
 import streamlit as st
 from logic_utils import check_guess
 
+from logic_utils import update_score
+
 # FIXME: Logic breaks here
 def get_range_for_difficulty(difficulty: str):
     if difficulty == "Easy":
@@ -38,24 +40,6 @@ OUTCOME_MESSAGES = {
     "Too Low": "📈 Go HIGHER!",
 }
 
-
-# FIXME: Logic breaks here
-def update_score(current_score: int, outcome: str, attempt_number: int):
-    if outcome == "Win":
-        points = 100 - 10 * (attempt_number + 1)
-        if points < 10:
-            points = 10
-        return current_score + points
-
-    if outcome == "Too High":
-        if attempt_number % 2 == 0:
-            return current_score + 5
-        return current_score - 5
-
-    if outcome == "Too Low":
-        return current_score - 5
-
-    return current_score
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
@@ -98,9 +82,8 @@ if difficulty_changed:
     st.session_state.status = "playing"
     st.session_state.history = []
 
-# FIXME: Logic breaks here
 if "attempts" not in st.session_state:
-    st.session_state.attempts = 1
+    st.session_state.attempts = 0
 
 if "score" not in st.session_state:
     st.session_state.score = 0
@@ -139,6 +122,9 @@ with col3:
     show_hint = st.checkbox("Show hint", value=True)
 
 if new_game:
+    st.session_state.score = 0
+    st.session_state.status = "playing"
+    st.session_state.history = []
     st.session_state.attempts = 0
     st.session_state.secret = random.randint(low, high)
     st.success("New game started.")

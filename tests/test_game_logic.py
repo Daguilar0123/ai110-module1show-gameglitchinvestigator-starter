@@ -25,3 +25,12 @@ def test_check_guess_does_not_fall_back_to_string_compare():
     import pytest
     with pytest.raises(TypeError):
         check_guess(9, "80")
+
+def test_win_score_first_guess():
+    from logic_utils import update_score
+    assert update_score(0, "Win", 1) == 90
+
+def test_too_high_score_flat_penalty():
+    from logic_utils import update_score
+    assert update_score(0, "Too High", 2) == -5
+    assert update_score(0, "Too High", 3) == -5
