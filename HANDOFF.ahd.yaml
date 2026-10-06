@@ -12,7 +12,7 @@ meta:
     5th session to expand test coverage once logic_utils.py has no stubs left.
   situation_class: [BUILD]
   handoff_state: BLOCKED_ON_PRINCIPAL
-  next_agent_first_action: plan.M3
+  next_agent_first_action: plan.M4
   prior_agent_actions:
     - Catalogued 10 distinct bugs in app.py/logic_utils.py via direct play and code reading
     - Marked 8 "# FIXME: Logic breaks here" comments across 4 coupled bug-locations in app.py; wrote BUGFIX_PLAN.md with one dispatch prompt per bug
@@ -44,6 +44,16 @@ chain_of_custody:
      sections_touched: [bug_worktrees, decisions, unverified_claims, open_questions, plan],
      summary: "All 4 bug branches now committed and PRINCIPAL-verified (pytest + live check each): A c97c18e, B 22017a0, C ed6a604+7cc8b1f (two commits — the original scoring fix plus a follow-up for Issue 6), D c78016d. Issue 6 (New Game not resetting status/score/history) found live-checking Bug C, confirmed severe, fixed on Bug C's branch per DR11 after Bug C's session pushed back empirically (scratch-clone merge tests) on the coordinator's first proposed placement and corrected a factual error in it. Issue 5 (game-over check only runs on valid guesses) confirmed as a real bug but explicitly track-and-report-only, not fixed, per PRINCIPAL's time constraint (DR10). open_questions now empty. next_agent_first_action advances to plan.M3 — the batched merge.",
      timestamp: "2026-10-06T01:15:00Z"}
+  - {seq: 4, agent: claude-sonnet-5, platform: cli,
+     state_in: BLOCKED_ON_PRINCIPAL, state_out: BLOCKED_ON_PRINCIPAL,
+     sections_touched: [target_architecture, bug_worktrees, plan],
+     summary: "plan.M3 (INTEGRATION) complete. PRINCIPAL merged all 4 branches into main himself, in order D, B, C, A, running every git command personally; the coordinator resolved 2 of 4 merges' test-file-tail conflicts via direct Edit (both were mechanical combinations of already-approved test code, not new decisions) after PRINCIPAL asked whether to do it himself or have the coordinator do it. app.py and logic_utils.py auto-merged cleanly every time — the predicted import-line conflict never materialized; only the appended-tests-at-the-tail pattern actually conflicted, twice. Verified directly: 0 FIXME comments remain in app.py, exactly 1 NotImplementedError remains in logic_utils.py (parse_guess, unassigned, plan.M5), all 9 tests pass on main. next_agent_first_action advances to plan.M4.",
+     timestamp: "2026-10-06T02:00:00Z"}
+  - {seq: 5, agent: claude-sonnet-5, platform: cli,
+     state_in: BLOCKED_ON_PRINCIPAL, state_out: BLOCKED_ON_PRINCIPAL,
+     sections_touched: [verification],
+     summary: "PRINCIPAL ran a full live playthrough on main (plain streamlit run app.py, no worktree, no port override) combining all 4 fixes plus Issue 6 for the first time — all 5 checks (Hard range/attempts/prompt-text consistency, correct hint direction on odd+even attempts, correct Win/Too-High scoring, secret staying in-range across difficulty switches, New Game actually accepting a guess after a win/loss) confirmed passing together. This is the first point in the whole engagement the game has worked end to end. Remaining: push to origin, dispatch the testing-expansion session (plan.M4), remove the 4 worktrees (plan.M4), migrate parse_guess (plan.M5), and write up Issue 5 in a deliverable (README.md/reflection.md).",
+     timestamp: "2026-10-06T02:20:00Z"}
 
 actor_state:
   - id: A1
